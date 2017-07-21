@@ -22,7 +22,7 @@ func parseUser(a []string) (*UserCmd, *Response) {
 	}, nil
 }
 
-func (c *UserCmd) Execute(w io.Writer, s State) (*Response, State) {
+func (c *UserCmd) Execute(rw io.ReadWriter, s State) (*Response, State) {
 	switch s.(type) {
 	case SConnected:
 		return &Response{

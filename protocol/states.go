@@ -16,3 +16,7 @@ type SUserPassProvided struct {
 type SLogged struct {
 	user string
 }
+
+type SInTransfer struct {
+	streams []string
+}

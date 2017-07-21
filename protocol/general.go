@@ -8,7 +8,11 @@ import (
 )
 
 type Command interface {
-	Execute(w io.Writer, s State) (*Response, State)
+	//execute is used on server and accepts network ReadWriter to exchange data
+	//current server State
+	//and returns new State and result to send to control connection
+	Execute(rw io.ReadWriter, s State) (*Response, State)
+	//send serializes command on client
 	Send(w io.Writer) error
 }
 
@@ -27,6 +31,8 @@ func ParseCommand(s string) (Command, *Response) {
 	switch a[0] {
 	case "USER":
 		cmd, resp = parseUser(a)
+	case "PASS":
+		cmd, resp = parsePass(a)
 	case "QUIT":
 		cmd, resp = parseQuit(a)
 	case "PORT":

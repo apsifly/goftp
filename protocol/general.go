@@ -8,8 +8,8 @@ import (
 )
 
 type Command interface {
-	//Execute()
-	//Send()
+	Execute(w io.Writer, s State) (*Response, State)
+	Send(w io.Writer) error
 }
 
 func ParseCommand(s string) (Command, *Response) {

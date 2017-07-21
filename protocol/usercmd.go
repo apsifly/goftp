@@ -1,6 +1,9 @@
 package protocol
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 type UserCmd struct {
 	user string
@@ -19,4 +22,27 @@ func parseUser(a []string) (*UserCmd, *Response) {
 	}, nil
 }
 
-//func (c *UserCmd) Execute(w io.Writer, s State) (*Response, State)
+func (c *UserCmd) Execute(w io.Writer, s State) (*Response, State) {
+	switch s.(type) {
+	case SConnected:
+		return &Response{
+				code:    "331",
+				message: "User name okay, need password.",
+				err:     nil,
+			},
+			SUserProvided{
+				user: c.user,
+			}
+
+	default:
+		return &Response{
+			code:    "503",
+			message: "Bad sequence of commands.",
+			err:     fmt.Errorf("state: %t, %v, tried to log user, %s", s, s, c.user),
+		}, s
+	}
+}
+func (c *UserCmd) Send(w io.Writer) error {
+	_, err := io.WriteString(w, "USER "+c.user+"\r\n")
+	return err
+}

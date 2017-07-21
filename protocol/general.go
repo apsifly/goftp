@@ -30,6 +30,19 @@ func ParseCommand(s string) (Command, error) {
 		cmd, err = parsePort(a)
 	case "TYPE":
 		cmd, err = parseType(a)
+	case "MODE":
+		cmd, err = parseMode(a)
+	case "STRU":
+		cmd, err = parseStructure(a)
+	case "RETR":
+		cmd, err = parseRetrieve(a)
+	case "STOR":
+		cmd, err = parseStore(a)
+	case "NOOP":
+		cmd, err = parseNoop(a)
+	default:
+		return nil, fmt.Errorf("unknown command")
 
 	}
+	return cmd, err
 }

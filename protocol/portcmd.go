@@ -12,14 +12,22 @@ type PortCmd struct {
 	port int
 }
 
-func parsePort(a []string) (*PortCmd, error) {
+func parsePort(a []string) (*PortCmd, *Response) {
 	if len(a) != 2 {
-		return nil, fmt.Errorf("no host-port argument")
+		return nil, &Response{
+			code:    "501",
+			message: "Syntax error in parameters or arguments.",
+			err:     fmt.Errorf("wrong number of arguments"),
+		}
 	}
-	re1 := regexp.MustCompile("^([0-9]+,){5}[0-9]$")
+	re1 := regexp.MustCompile("^([0-9]+,){5}[0-9]+$")
 
 	if !re1.MatchString(a[1]) {
-		return nil, fmt.Errorf("wrong host-port syntax")
+		return nil, &Response{
+			code:    "501",
+			message: "Syntax error in parameters or arguments.",
+			err:     fmt.Errorf("wrong host-port syntax"),
+		}
 	}
 	hostport := strings.Split(a[1], ",")
 	mustAtoi := func(s string) int {

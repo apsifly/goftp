@@ -2,47 +2,68 @@ package protocol
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"strings"
 )
 
 type Command interface {
-	Execute()
-	Send()
-}
-type Response interface {
-	Send()
+	//Execute()
+	//Send()
 }
 
-func ParseCommand(s string) (Command, error) {
+func ParseCommand(s string) (Command, *Response) {
 	s = strings.TrimRight(s, "\r\n")
 	a := strings.SplitN(s, " ", 2)
 	if len(a) == 0 {
-		return nil, fmt.Errorf("can not parse command")
+		return nil, &Response{
+			code:    "500",
+			message: "Syntax error, command unrecognized.",
+			err:     fmt.Errorf("can not parse command in strings.Split"),
+		}
 	}
 	var cmd Command
-	var err error
+	var resp *Response
 	switch a[0] {
 	case "USER":
-		cmd, err = parseUser(a)
+		cmd, resp = parseUser(a)
 	case "QUIT":
-		cmd, err = parseQuit(a)
+		cmd, resp = parseQuit(a)
 	case "PORT":
-		cmd, err = parsePort(a)
+		cmd, resp = parsePort(a)
 	case "TYPE":
-		cmd, err = parseType(a)
+		cmd, resp = parseType(a)
 	case "MODE":
-		cmd, err = parseMode(a)
+		cmd, resp = parseMode(a)
 	case "STRU":
-		cmd, err = parseStructure(a)
+		cmd, resp = parseStructure(a)
 	case "RETR":
-		cmd, err = parseRetrieve(a)
+		cmd, resp = parseRetrieve(a)
 	case "STOR":
-		cmd, err = parseStore(a)
+		cmd, resp = parseStore(a)
 	case "NOOP":
-		cmd, err = parseNoop(a)
+		cmd, resp = parseNoop(a)
 	default:
-		return nil, fmt.Errorf("unknown command")
+		return nil, &Response{
+			code:    "500",
+			message: "Syntax error, command unrecognized.",
+			err:     fmt.Errorf("unknown command"),
+		}
 
 	}
-	return cmd, err
+	return cmd, resp
+}
+
+type Response struct {
+	code    string
+	message string
+	err     error //for internal usage
+}
+
+func (r *Response) Send(w io.Writer) {
+	if r.err != nil {
+		log.Println("sent response ", r.code+" "+r.message, " with error ", r.err.Error())
+	}
+	io.WriteString(w, r.code+" "+r.message+"\r\n")
+
 }

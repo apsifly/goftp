@@ -22,33 +22,31 @@ func parsePass(a []string) (*PassCmd, *Response) {
 	}, nil
 }
 
-func (c *PassCmd) Execute(rw io.ReadWriter, s State) (*Response, State) {
-	switch s := s.(type) {
-	case SUserProvided:
-		return &Response{
-				code:    "530", //pass stored for authentification
-				message: "Not logged in.",
-				err:     nil,
-			},
-			SUserPassProvided{
-				user: s.user,
-				pass: c.pass,
-			}
+func (c *PassCmd) Execute(s *State, ch chan *Response) {
+	//switch s := s.(type) {
+	if s.Logged == false && s.User != "" {
+		s.Lock()
+		s.Pass = c.pass
+		s.Unlock()
+		ch <- &Response{
+			code:    "530", //pass stored for authentification
+			message: "Not logged in.",
+			err:     nil,
+		}
 
-	case SConnected:
-		return &Response{
-				code:    "332",
-				message: "Need account for login.",
-				err:     nil,
-			},
-			SConnected{}
+	} else if s.Logged == false {
+		ch <- &Response{
+			code:    "332",
+			message: "Need account for login.",
+			err:     nil,
+		}
 
-	default:
-		return &Response{
+	} else {
+		ch <- &Response{
 			code:    "503",
 			message: "Bad sequence of commands.",
-			err:     fmt.Errorf("state: %t, %v, tried to send password, %s", s, s, c.pass),
-		}, s
+			err:     fmt.Errorf("state: %v, tried to send password, %s", s, c.pass),
+		}
 	}
 }
 

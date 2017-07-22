@@ -2,6 +2,9 @@ package protocol
 
 import (
 	"fmt"
+	"io"
+	"log"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -39,4 +42,36 @@ func parsePort(a []string) (*PortCmd, *Response) {
 		port: mustAtoi(hostport[4])*256 + mustAtoi(hostport[5]),
 	}
 	return cmd, nil
+}
+
+func (c *PortCmd) Execute(s *State, ch chan *Response) {
+	s.Lock()
+	defer s.Unlock()
+	log.Println("connecting " + c.host + ":" + strconv.Itoa(c.port))
+	dc, err := net.Dial("tcp", c.host+":"+strconv.Itoa(c.port))
+	if err != nil {
+		log.Println("error connecting ", err)
+		ch <- &Response{
+			code:    "425",
+			message: "Can't open data connection.",
+			err:     err,
+		}
+	} else {
+		log.Println("success")
+		s.DataConn = dc
+		ch <- &Response{
+			code:    "225",
+			message: "Data connection open; no transfer in progress.",
+			err:     err,
+		}
+	}
+}
+func (c *PortCmd) Send(w io.Writer) error {
+	message := "PORT " +
+		strings.Replace(c.host, ".", ",", 3) + "," +
+		strconv.Itoa(c.port/256) + "," +
+		strconv.Itoa(c.port%256) + "\r\n"
+
+	_, err := io.WriteString(w, message)
+	return err
 }

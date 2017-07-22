@@ -22,24 +22,24 @@ func parseUser(a []string) (*UserCmd, *Response) {
 	}, nil
 }
 
-func (c *UserCmd) Execute(rw io.ReadWriter, s State) (*Response, State) {
-	switch s.(type) {
-	case SConnected:
-		return &Response{
-				code:    "331",
-				message: "User name okay, need password.",
-				err:     nil,
-			},
-			SUserProvided{
-				user: c.user,
-			}
+func (c *UserCmd) Execute(s *State, ch chan *Response) {
+	//switch s.(type) {
+	if s.Logged == false {
+		s.Lock()
+		s.User = c.user
+		s.Unlock()
+		ch <- &Response{
+			code:    "331",
+			message: "User name okay, need password.",
+			err:     nil,
+		}
 
-	default:
-		return &Response{
+	} else {
+		ch <- &Response{
 			code:    "503",
 			message: "Bad sequence of commands.",
-			err:     fmt.Errorf("state: %t, %v, tried to log user, %s", s, s, c.user),
-		}, s
+			err:     fmt.Errorf("state: %v, tried to log user, %s", s, c.user),
+		}
 	}
 }
 func (c *UserCmd) Send(w io.Writer) error {

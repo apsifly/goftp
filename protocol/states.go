@@ -1,22 +1,17 @@
 package protocol
 
-type State interface {
-}
+import (
+	"io"
+	"sync"
+)
 
-type SConnected struct {
-}
-
-type SUserProvided struct {
-	user string
-}
-type SUserPassProvided struct {
-	user string
-	pass string
-}
-type SLogged struct {
-	user string
-}
-
-type SInTransfer struct {
-	streams []string
+type State struct {
+	sync.Mutex
+	User       string
+	Pass       string
+	Logged     bool
+	DataConn   io.ReadWriteCloser
+	RetrActive bool
+	StorActive bool
+	CmdActive  map[int]*Command
 }

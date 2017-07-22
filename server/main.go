@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
+	"ftp/protocol"
 	"log"
 	"net"
+	"regexp"
 )
 
 func main() {
@@ -26,16 +29,58 @@ func main() {
 }
 
 func processConn(c net.Conn) {
-	buf := make([]byte, 1024)
+	var st protocol.State
+	var readerCh = make(chan string)
+	go reader(readerCh, c)
+	responseCh := make(chan *protocol.Response)
+
+	s := protocol.State{}
+mainloop:
 	for {
-		n, err := c.Read(buf)
-		if err != nil {
-			log.Println(err)
-			break
+		select {
+		case recvStr, ok := <-readerCh:
+			if !ok {
+				log.Println("control connection closed")
+				break mainloop
+			}
+			log.Println(recvStr)
+			comm, r := protocol.ParseCommand(recvStr)
+			if r != nil {
+				r.Send(c)
+			} else {
+				log.Printf("executing command %t, %v\n", comm, comm)
+				go comm.Execute(&s, responseCh)
+			}
+			c.Write([]byte(recvStr))
+		case r := <-responseCh:
+			r.Send(c)
 		}
-		c.Write(buf[:n])
+
 	}
 
 	// Shut down the connection.
 	c.Close()
+	if st.DataConn != nil {
+		st.DataConn.Close()
+	}
+}
+
+func reader(ch chan string, c net.Conn) {
+	re1 := regexp.MustCompile("^[^\r]*\r\n")
+	bufreader := bufio.NewReader(c) //.ReadString('\n')
+	fullstr := ""
+	for {
+		str, err := bufreader.ReadString('\n')
+		if err != nil {
+			log.Println(err)
+			break
+		}
+		if re1.FindString(fullstr+str) != "" {
+			ch <- fullstr + str
+			fullstr = ""
+		} else {
+			fullstr += str
+		}
+	}
+	close(ch)
 }

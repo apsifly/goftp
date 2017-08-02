@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 )
@@ -13,32 +14,22 @@ type TypeCmd struct {
 
 func parseType(a []string) (*TypeCmd, *Response) {
 	if len(a) != 2 {
-		return nil, &Response{
-			code:    "501",
-			message: "Syntax error in parameters or arguments.",
-			err:     fmt.Errorf("not enough arguments"),
-		}
+		return nil, NewResponse(Response501, "", fmt.Errorf("not enough arguments"))
 	}
 	typearg := a[1]
 	if len(typearg) > 1 && typearg[1:2] != " " {
-		return nil, &Response{
-			code:    "501",
-			message: "Syntax error in parameters or arguments.",
-			err:     fmt.Errorf("wrong argument: %s", typearg),
-		}
+		return nil, NewResponse(Response501, "", fmt.Errorf("wrong argument: %s", typearg))
 	}
 	cmd := &TypeCmd{}
 	switch typearg[0:1] {
 	case "A", "a", "E", "e":
-		switch typearg[2:3] {
-		case "N", "n", "T", "t", "C", "c":
-			cmd.main = strings.ToUpper(typearg[0:1])
-			cmd.sub = strings.ToUpper(typearg[2:3])
-		default:
-			return nil, &Response{
-				code:    "504",
-				message: "Command not implemented for that parameter.",
-				err:     fmt.Errorf("wrong secondary type"),
+		cmd.main = strings.ToUpper(typearg[0:1])
+		if len(typearg) > 1 {
+			switch typearg[2:3] {
+			case "N", "n", "T", "t", "C", "c":
+				cmd.sub = strings.ToUpper(typearg[2:3])
+			default:
+				return nil, NewResponse(Response504, "", fmt.Errorf("wrong secondary type"))
 			}
 		}
 	case "I", "i":
@@ -47,20 +38,31 @@ func parseType(a []string) (*TypeCmd, *Response) {
 	case "L", "l":
 		re1 := regexp.MustCompile("^[0-9]+$")
 		if !re1.MatchString(typearg[2:]) {
-			return nil, &Response{
-				code:    "501",
-				message: "Syntax error in parameters or arguments.",
-				err:     fmt.Errorf("byte size is not a number"),
-			}
+			return nil, NewResponse(Response501, "", fmt.Errorf("byte size is not a number"))
 		}
 		cmd.main = strings.ToUpper(typearg[0:1])
 		cmd.sub = strings.ToUpper(typearg[2:])
 	default:
-		return nil, &Response{
-			code:    "504",
-			message: "Command not implemented for that parameter.",
-			err:     fmt.Errorf("wrong primary type"),
-		}
+		return nil, NewResponse(Response504, "", fmt.Errorf("wrong primary type"))
 	}
 	return cmd, nil
+}
+
+func (c *TypeCmd) Execute(s *State, ch chan *Response) {
+	s.TransferType = c.main + c.sub
+	ch <- NewResponse(Response200, "", nil)
+}
+func (c *TypeCmd) Send(w io.Writer) error {
+	m := "TYPE " + c.main
+	if len(c.sub) != 0 {
+		m += " " + c.sub
+	}
+	_, err := io.WriteString(w, m)
+	return err
+}
+func NewTypeCmd(main, sub string) *TypeCmd {
+	return &TypeCmd{
+		main: main,
+		sub:  sub,
+	}
 }

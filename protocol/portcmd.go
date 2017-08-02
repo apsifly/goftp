@@ -17,20 +17,12 @@ type PortCmd struct {
 
 func parsePort(a []string) (*PortCmd, *Response) {
 	if len(a) != 2 {
-		return nil, &Response{
-			code:    "501",
-			message: "Syntax error in parameters or arguments.",
-			err:     fmt.Errorf("wrong number of arguments"),
-		}
+		return nil, NewResponse(Response501, "", fmt.Errorf("wrong number of arguments"))
 	}
 	re1 := regexp.MustCompile("^([0-9]+,){5}[0-9]+$")
 
 	if !re1.MatchString(a[1]) {
-		return nil, &Response{
-			code:    "501",
-			message: "Syntax error in parameters or arguments.",
-			err:     fmt.Errorf("wrong host-port syntax"),
-		}
+		return nil, NewResponse(Response501, "", fmt.Errorf("wrong host-port syntax"))
 	}
 	hostport := strings.Split(a[1], ",")
 	mustAtoi := func(s string) int {
@@ -47,23 +39,18 @@ func parsePort(a []string) (*PortCmd, *Response) {
 func (c *PortCmd) Execute(s *State, ch chan *Response) {
 	s.Lock()
 	defer s.Unlock()
+	if s.DataConn != nil {
+		s.DataConn.Close()
+	}
 	log.Println("connecting " + c.host + ":" + strconv.Itoa(c.port))
 	dc, err := net.Dial("tcp", c.host+":"+strconv.Itoa(c.port))
 	if err != nil {
 		log.Println("error connecting ", err)
-		ch <- &Response{
-			code:    "425",
-			message: "Can't open data connection.",
-			err:     err,
-		}
+		ch <- NewResponse(Response425, "", err)
 	} else {
 		log.Println("success")
 		s.DataConn = dc
-		ch <- &Response{
-			code:    "225",
-			message: "Data connection open; no transfer in progress.",
-			err:     err,
-		}
+		ch <- NewResponse(Response200, "", err)
 	}
 }
 func (c *PortCmd) Send(w io.Writer) error {

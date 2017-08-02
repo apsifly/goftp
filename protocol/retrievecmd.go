@@ -1,26 +1,24 @@
 package protocol
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"path"
 )
 
 type RetrieveCmd struct {
-	path string
+	Path string
 }
 
 func parseRetrieve(a []string) (*RetrieveCmd, *Response) {
 	if len(a) != 2 || len(a[1]) == 0 {
-		return nil, &Response{
-			code:    "501",
-			message: "Syntax error in parameters or arguments.",
-			err:     fmt.Errorf("no file path provided"),
-		}
+		return nil, NewResponse(Response501, "", fmt.Errorf("no file path provided"))
 	}
 
 	return &RetrieveCmd{
-		path: a[1],
+		Path: path.Clean(a[1]),
 	}, nil
 }
 
@@ -29,44 +27,61 @@ func (c *RetrieveCmd) Execute(s *State, ch chan *Response) {
 
 	defer s.Unlock()
 	if s.DataConn != nil && s.RetrActive == false {
-		f, err := os.Open(c.path)
+		f, err := os.Open(c.Path)
 		if err != nil {
-			ch <- &Response{
-				code:    "550",
-				message: "Requested action not taken.",
-				err:     err,
-			}
+			ch <- NewResponse(Response550, "", err)
 			return
 		}
 		s.RetrActive = true
+		ch <- NewResponse(Response150, "", nil)
 		s.Unlock()
-		_, err = io.Copy(s.DataConn, f)
+		err = copyWithTransform(s.DataConn, f, s.TransferType)
+		s.DataConn.Close()
 		s.Lock()
 		s.RetrActive = false
 		if err != nil {
-			ch <- &Response{
-				code:    "450",
-				message: "Requested file action not taken.",
-				err:     err,
-			}
+			ch <- NewResponse(Response450, "", err)
 		} else {
-			ch <- &Response{
-				code:    "250",
-				message: "Requested file action okay, completed.",
-				err:     err,
-			}
+			ch <- NewResponse(Response250, "", err)
 			return
 		}
 	} else {
-		ch <- &Response{
-			code:    "550",
-			message: "Requested action not taken.",
-			err:     nil,
-		}
+		ch <- NewResponse(Response450, "", nil)
 	}
 }
 
 func (c *RetrieveCmd) Send(w io.Writer) error {
-	_, err := io.WriteString(w, "RETR "+c.path+"\r\n")
+	_, err := io.WriteString(w, "RETR "+c.Path+"\r\n")
 	return err
+}
+
+func copyWithTransform(dst io.ReadWriteCloser, src io.Reader, mode string) error {
+	buf := make([]byte, 32*1024)
+	var err error
+	var dbuf []byte
+	for {
+		nr, er := src.Read(buf)
+		if nr > 0 {
+			switch mode[0] {
+			case 'A':
+				tmpbuf := bytes.Replace(buf[:nr], []byte("\r\n"), []byte("\n"), -1) //keep \r\n
+				dbuf = bytes.Replace(tmpbuf, []byte("\n"), []byte("\r\n"), -1)      //and replace \n with \r\n
+			default:
+				dbuf = buf[:nr]
+			}
+			_, ew := dst.Write(dbuf)
+			if ew != nil {
+				err = ew
+				break
+			}
+		}
+		if er != nil {
+			if er != io.EOF {
+				err = er
+			}
+			break
+		}
+	}
+	return err
+
 }

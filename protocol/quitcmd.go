@@ -1,17 +1,24 @@
 package protocol
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 type QuitCmd struct {
 }
 
 func parseQuit(a []string) (*QuitCmd, *Response) {
 	if len(a) != 1 {
-		return nil, &Response{
-			code:    "501",
-			message: "Syntax error in parameters or arguments.",
-			err:     fmt.Errorf("additional parameter to quit"),
-		}
+		return nil, NewResponse(Response501, "", fmt.Errorf("got additional parameter to quit"))
 	}
 	return &QuitCmd{}, nil
+}
+
+func (c *QuitCmd) Execute(s *State, ch chan *Response) {
+	ch <- NewResponse(Response221, "", nil)
+}
+func (c *QuitCmd) Send(w io.Writer) error {
+	io.WriteString(w, "QUIT\r\n")
+	return nil
 }

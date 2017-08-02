@@ -1,0 +1,13 @@
+server:
+  host: "localhost"
+  port: 2000
+users:
+  user1:
+    password: "123"
+    disabled: false
+    writepath:
+    - a
+    - b
+    readpath:
+    - c
+    - d

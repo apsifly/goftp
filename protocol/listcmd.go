@@ -29,6 +29,7 @@ func (c *ListCmd) Execute(s *State, ch chan *Response) {
 		files, err := ioutil.ReadDir(c.Path)
 		if err != nil {
 			ch <- NewResponse(Response451, "Error while reading specified directory", err)
+			s.DataConn.Close()
 		} else {
 			var lasterr error = nil
 			for _, file := range files {
@@ -39,20 +40,27 @@ func (c *ListCmd) Execute(s *State, ch chan *Response) {
 			}
 			if lasterr != nil {
 				ch <- NewResponse(Response425, "", lasterr)
+				s.DataConn.Close() //expected by client when reading response
 			} else {
 
 				ch <- NewResponse(Response226, "", nil)
-				s.DataConn.Close() //expected by client
+				s.DataConn.Close()
 				s.DataConn = nil
 			}
 		}
 
 	} else {
 		ch <- NewResponse(Response425, "", nil)
+		s.DataConn.Close()
 	}
 }
 
 func (c *ListCmd) Send(w io.Writer) error {
 	_, err := io.WriteString(w, "LIST "+c.Path+"\r\n")
 	return err
+}
+func NewListCmd(p string) *ListCmd {
+	return &ListCmd{
+		Path: path.Clean(p),
+	}
 }

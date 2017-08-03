@@ -28,15 +28,14 @@ func (c *PassiveCmd) Execute(s *State, ch chan *Response) {
 		s.DataConn.Close()
 	}
 	lowestPort := 1000
-	tryPort := rand.Int()%(65535-lowestPort) + lowestPort
+	var tryPort int
 	var sock net.Listener
 	var err error
 	for i := 0; i < 5; i++ {
-		sock, err = net.Listen("tcp", s.LocalIP+":"+strconv.Itoa(tryPort))
+		tryPort = rand.Int()%(65535-lowestPort) + lowestPort
+		sock, err = net.Listen("tcp", s.LocalAddr+":"+strconv.Itoa(tryPort))
 		if err == nil {
 			break
-		} else {
-			tryPort = rand.Int()*(65535-lowestPort) + lowestPort
 		}
 	}
 
@@ -44,8 +43,12 @@ func (c *PassiveCmd) Execute(s *State, ch chan *Response) {
 		log.Println("Error accepting passive connection ", err)
 		ch <- NewResponse(Response425, "", err)
 	} else {
+		//server can accept connections at multiple addresses
+		//we should identify current one
+		localip := s.CmdConn.LocalAddr().String()
+		localip = localip[:strings.LastIndex(localip, ":")] //remove port
 		respString := "Entering Passive Mode ("
-		respString += strings.Replace(s.LocalIP, ".", ",", -1)
+		respString += strings.Replace(localip, ".", ",", -1)
 		respString += "," + strconv.Itoa(tryPort/256) + "," +
 			strconv.Itoa(tryPort%256) + ")."
 		ch <- NewResponse(Response227, respString, err)
@@ -60,4 +63,7 @@ func (c *PassiveCmd) Execute(s *State, ch chan *Response) {
 func (c *PassiveCmd) Send(w io.Writer) error {
 	_, err := io.WriteString(w, "PASV\r\n")
 	return err
+}
+func NewPassiveCmd() *PassiveCmd {
+	return &PassiveCmd{}
 }

@@ -85,3 +85,9 @@ func copyWithTransform(dst io.ReadWriteCloser, src io.Reader, mode string) error
 	return err
 
 }
+
+func NewRetrieveCmd(p string) *RetrieveCmd {
+	return &RetrieveCmd{
+		Path: path.Clean(p),
+	}
+}

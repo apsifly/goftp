@@ -84,3 +84,9 @@ func storeWithTransform(dst io.ReadWriteCloser, src io.Reader, mode string) erro
 	return err
 
 }
+
+func NewStoreCmd(p string) *StoreCmd {
+	return &StoreCmd{
+		Path: path.Clean(p),
+	}
+}

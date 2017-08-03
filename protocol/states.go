@@ -14,5 +14,6 @@ type State struct {
 	RetrActive   bool
 	StorActive   bool
 	TransferType string
-	LocalIP      string
+	LocalAddr    string
+	CmdConn      net.Conn
 }

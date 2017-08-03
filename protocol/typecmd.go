@@ -3,7 +3,6 @@ package protocol
 import (
 	"fmt"
 	"io"
-	"regexp"
 	"strings"
 )
 
@@ -36,12 +35,11 @@ func parseType(a []string) (*TypeCmd, *Response) {
 		cmd.main = strings.ToUpper(typearg[0:1])
 
 	case "L", "l":
-		re1 := regexp.MustCompile("^[0-9]+$")
-		if !re1.MatchString(typearg[2:]) {
-			return nil, NewResponse(Response501, "", fmt.Errorf("byte size is not a number"))
-		}
+
 		cmd.main = strings.ToUpper(typearg[0:1])
-		cmd.sub = strings.ToUpper(typearg[2:])
+		if len(typearg) > 2 {
+			cmd.sub = strings.ToUpper(typearg[2:])
+		}
 	default:
 		return nil, NewResponse(Response504, "", fmt.Errorf("wrong primary type"))
 	}
@@ -57,6 +55,7 @@ func (c *TypeCmd) Send(w io.Writer) error {
 	if len(c.sub) != 0 {
 		m += " " + c.sub
 	}
+	m += "\r\n"
 	_, err := io.WriteString(w, m)
 	return err
 }

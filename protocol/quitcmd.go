@@ -22,3 +22,6 @@ func (c *QuitCmd) Send(w io.Writer) error {
 	io.WriteString(w, "QUIT\r\n")
 	return nil
 }
+func NewQuitCmd() *QuitCmd {
+	return &QuitCmd{}
+}

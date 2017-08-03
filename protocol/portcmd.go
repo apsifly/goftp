@@ -62,3 +62,10 @@ func (c *PortCmd) Send(w io.Writer) error {
 	_, err := io.WriteString(w, message)
 	return err
 }
+
+func NewPortCmd(host string, port int) *PortCmd {
+	return &PortCmd{
+		host: host,
+		port: port,
+	}
+}

@@ -46,7 +46,8 @@ func processConn(c net.Conn) {
 	responseCh := make(chan *protocol.Response)
 	s := protocol.State{
 		TransferType: osdependent.FtpType,
-		LocalIP:      config.Server.Host,
+		LocalAddr:    config.Server.Host,
+		CmdConn:      c,
 	}
 
 	io.WriteString(c, "220 (goFTPD 0.1)\r\n")

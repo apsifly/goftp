@@ -13,7 +13,7 @@
 
 package main
 
-import "ftp/client/cmd"
+import "github.com/apsifly/goftp/client/cmd"
 
 func main() {
 	cmd.Execute()

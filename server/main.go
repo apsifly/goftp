@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"ftp/protocol"
-	"ftp/protocol/osdependent"
 	"io"
 	"log"
 	"net"
@@ -13,6 +11,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/apsifly/goftp/protocol"
+	"github.com/apsifly/goftp/protocol/osdependent"
 )
 
 func main() {
@@ -65,7 +66,7 @@ mainloop:
 			if r != nil {
 				r.Send(c)
 			} else {
-				log.Printf("executing command %T, %v\n", comm, comm)
+
 				go allowAndExecute(comm, &s, responseCh)
 			}
 			//c.Write([]byte(recvStr))
@@ -109,6 +110,7 @@ func reader(ch chan string, c net.Conn) {
 }
 
 func allowAndExecute(c protocol.Command, s *protocol.State, ch chan *protocol.Response) {
+	log.Printf("executing command %T, %v\n", c, c)
 	switch c := c.(type) {
 	case *protocol.PassCmd:
 		allowAndExecutePassCmd(c, s, ch)
@@ -117,7 +119,7 @@ func allowAndExecute(c protocol.Command, s *protocol.State, ch chan *protocol.Re
 		matched := false
 		if ok {
 			for _, readPath := range user.ReadPath {
-				if readPath == c.Path || strings.HasPrefix(c.Path, path.Clean(readPath+"/")) {
+				if readPath == c.Path || strings.HasPrefix(c.Path, path.Clean(readPath)+"/") {
 					matched = true
 				}
 			}
@@ -132,7 +134,8 @@ func allowAndExecute(c protocol.Command, s *protocol.State, ch chan *protocol.Re
 		matched := false
 		if ok {
 			for _, readPath := range user.ReadPath {
-				if readPath == c.Path || strings.HasPrefix(c.Path, path.Clean(readPath+"/")) {
+				if readPath == c.Path || strings.HasPrefix(c.Path, path.Clean(readPath)+"/") {
+					log.Println("TEST,", c.Path, readPath, path.Clean(readPath)+"/")
 					matched = true
 				}
 			}
@@ -147,7 +150,7 @@ func allowAndExecute(c protocol.Command, s *protocol.State, ch chan *protocol.Re
 		matched := false
 		if ok {
 			for _, writePath := range user.WritePath {
-				if writePath == c.Path || strings.HasPrefix(c.Path, path.Clean(writePath+"/")) {
+				if writePath == c.Path || strings.HasPrefix(c.Path, path.Clean(writePath)+"/") {
 					matched = true
 				}
 			}
@@ -163,6 +166,9 @@ func allowAndExecute(c protocol.Command, s *protocol.State, ch chan *protocol.Re
 		} else {
 			ch <- protocol.NewResponse(protocol.Response503, "", fmt.Errorf("login reqiest from already logged user, state: %v", s))
 		}
+	case *protocol.QuitCmd:
+		c.Execute(s, ch)
+
 	default:
 		if s.Logged {
 			c.Execute(s, ch)
@@ -177,6 +183,7 @@ func allowAndExecutePassCmd(c protocol.Command, s *protocol.State, ch chan *prot
 	c.Execute(s, ch)
 	log.Println("pass", s)
 	user, ok := config.Users[s.User]
+	log.Println("user found? ", ok, user)
 
 	if ok && user.Password == s.Pass && !s.Logged {
 		s.Logged = true

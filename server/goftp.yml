@@ -9,5 +9,4 @@ users:
     - a
     - b
     readpath:
-    - c
-    - d
+    - "."

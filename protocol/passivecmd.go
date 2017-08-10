@@ -8,6 +8,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type PassiveCmd struct {
@@ -22,6 +23,7 @@ func parsePassive(a []string) (*PassiveCmd, *Response) {
 }
 
 func (c *PassiveCmd) Execute(s *State, ch chan *Response) {
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	s.Lock()
 	defer s.Unlock()
 	if s.DataConn != nil {
@@ -32,7 +34,7 @@ func (c *PassiveCmd) Execute(s *State, ch chan *Response) {
 	var sock net.Listener
 	var err error
 	for i := 0; i < 5; i++ {
-		tryPort = rand.Int()%(65535-lowestPort) + lowestPort
+		tryPort = random.Int()%(65535-lowestPort) + lowestPort
 		sock, err = net.Listen("tcp", s.LocalAddr+":"+strconv.Itoa(tryPort))
 		if err == nil {
 			break

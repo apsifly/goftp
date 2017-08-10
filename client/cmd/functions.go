@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bufio"
-	"ftp/protocol"
 	"io"
 	"log"
 	"math/rand"
@@ -12,6 +11,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/apsifly/goftp/protocol"
 )
 
 func ftpQuit(conn net.Conn, bufReader *bufio.Reader) {
@@ -143,13 +145,14 @@ func openDataConn(cmdConn net.Conn, bufReader *bufio.Reader) net.Conn {
 		}
 		//net.Dial(dataConn)
 	} else {
+		random := rand.New(rand.NewSource(time.Now().UnixNano()))
 		localIP := cmdConn.LocalAddr().String()
 		localIP = localIP[:strings.LastIndex(localIP, ":")] //remove port
 		lowestPort := 1000
 		var tryPort int
 		for i := 0; i < 15; i++ {
 			log.Println("start listen")
-			tryPort = rand.Int()%(65535-lowestPort) + lowestPort
+			tryPort = random.Int()%(65535-lowestPort) + lowestPort
 			log.Println("data port ", localIP, tryPort) //TODO: remove
 			sock, err = net.Listen("tcp", localIP+":"+strconv.Itoa(tryPort))
 			if err == nil {

@@ -2,7 +2,7 @@ package protocol
 
 import (
 	"fmt"
-	"ftp/protocol/osdependent"
+	"github.com/apsifly/goftp/protocol/osdependent"
 	"io"
 )
 

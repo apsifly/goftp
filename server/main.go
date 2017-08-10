@@ -10,7 +10,6 @@ import (
 	"path"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/apsifly/goftp/protocol"
 	"github.com/apsifly/goftp/protocol/osdependent"
@@ -119,7 +118,7 @@ func allowAndExecute(c protocol.Command, s *protocol.State, ch chan *protocol.Re
 		matched := false
 		if ok {
 			for _, readPath := range user.ReadPath {
-				if readPath == c.Path || strings.HasPrefix(c.Path, path.Clean(readPath)+"/") {
+				if pathHasPrefix(c.Path, path.Clean(readPath)) {
 					matched = true
 				}
 			}
@@ -134,7 +133,7 @@ func allowAndExecute(c protocol.Command, s *protocol.State, ch chan *protocol.Re
 		matched := false
 		if ok {
 			for _, readPath := range user.ReadPath {
-				if readPath == c.Path || strings.HasPrefix(c.Path, path.Clean(readPath)+"/") {
+				if pathHasPrefix(c.Path, path.Clean(readPath)) {
 					log.Println("TEST,", c.Path, readPath, path.Clean(readPath)+"/")
 					matched = true
 				}
@@ -150,7 +149,7 @@ func allowAndExecute(c protocol.Command, s *protocol.State, ch chan *protocol.Re
 		matched := false
 		if ok {
 			for _, writePath := range user.WritePath {
-				if writePath == c.Path || strings.HasPrefix(c.Path, path.Clean(writePath)+"/") {
+				if pathHasPrefix(c.Path, path.Clean(writePath)) {
 					matched = true
 				}
 			}
